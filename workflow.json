@@ -79,7 +79,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ locationId: 'zvqQVqFQGXCz7EDXP0GQ', firstName: $json.name, phone: $json.phone, tags: ['missed-call'], source: 'n8n missed call' }) }}",
+        "jsonBody": "={{ JSON.stringify({ locationId: 'YOUR_LOCATION_ID', firstName: $json.name, phone: $json.phone, tags: ['missed-call'], source: 'n8n missed call' }) }}",
         "options": {}
       },
       "id": "ca1279c6-cbfa-48ef-a9c4-fe5e56471bbf",
@@ -100,7 +100,7 @@
     },
     {
       "parameters": {
-        "sendTo": "ollieshepherd56@gmail.com",
+        "sendTo": "YOUR_EMAIL_ID",
         "subject": "Synclo – Missed Call to CRM: GoHighLevel request failed",
         "emailType": "text",
         "message": "=A GoHighLevel request failed in the Missed Call to CRM workflow.\n\nError: {{ (() => { const e = $input.item.json['error']; return (e && (e.message || e.description)) || (typeof e === 'string' ? e : JSON.stringify($input.item.json)); })() }}\n\nCaller: {{ $('Clean Caller Fields').item.json.name }} ({{ $('Clean Caller Fields').item.json.phone }})\nCall time: {{ $('Clean Caller Fields').item.json.call_time }}\nExecution: {{ $execution.id }}",
@@ -172,7 +172,7 @@
           "value": "1U5yuDmSzFHuH8P2-h75V-Gir3Af_H21wnXNcHP0UGcY",
           "mode": "list",
           "cachedResultName": "Synclo - Missed Call Leads",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1U5yuDmSzFHuH8P2-h75V-Gir3Af_H21wnXNcHP0UGcY/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEETS_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
