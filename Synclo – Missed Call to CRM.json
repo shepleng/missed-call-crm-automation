@@ -1,0 +1,338 @@
+{
+  "name": "Synclo – Missed Call to CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "synclo-missed-call",
+        "options": {}
+      },
+      "id": "c5779fe8-84c1-4d54-828b-b97b22b094ad",
+      "name": "Missed Call Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        128
+      ],
+      "webhookId": "61b44e02-d208-4982-ad57-e483393e583a"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f-name",
+              "name": "name",
+              "type": "string",
+              "value": "={{ String($json.body.name ?? '').trim() || 'New Caller' }}"
+            },
+            {
+              "id": "f-phone",
+              "name": "phone",
+              "type": "string",
+              "value": "={{ (() => { const raw = String($json.body.phone ?? '').trim(); const d = raw.replace(/\\D/g, ''); if (!d) return ''; if (raw.startsWith('+')) return '+' + d; if (d.startsWith('0061')) return '+' + d.slice(2); if (d.startsWith('61')) return '+' + d; if (d.startsWith('0')) return '+61' + d.slice(1); return '+61' + d; })() }}"
+            },
+            {
+              "id": "f-email",
+              "name": "email",
+              "type": "string",
+              "value": "={{ String($json.body.email ?? '').trim() }}"
+            },
+            {
+              "id": "f-time",
+              "name": "call_time",
+              "type": "string",
+              "value": "={{ $json.body.call_time || $now.toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "01e0249a-6eda-4b91-9b9f-0e73eff1fbd2",
+      "name": "Clean Caller Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/contacts/upsert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ locationId: 'zvqQVqFQGXCz7EDXP0GQ', firstName: $json.name, phone: $json.phone, tags: ['missed-call'], source: 'n8n missed call' }) }}",
+        "options": {}
+      },
+      "id": "ca1279c6-cbfa-48ef-a9c4-fe5e56471bbf",
+      "name": "Upsert GHL Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        128
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aypLtBQGMBHTJv5q",
+          "name": "GHL - Missed Call"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "ollieshepherd56@gmail.com",
+        "subject": "Synclo – Missed Call to CRM: GoHighLevel request failed",
+        "emailType": "text",
+        "message": "=A GoHighLevel request failed in the Missed Call to CRM workflow.\n\nError: {{ (() => { const e = $input.item.json['error']; return (e && (e.message || e.description)) || (typeof e === 'string' ? e : JSON.stringify($input.item.json)); })() }}\n\nCaller: {{ $('Clean Caller Fields').item.json.name }} ({{ $('Clean Caller Fields').item.json.phone }})\nCall time: {{ $('Clean Caller Fields').item.json.call_time }}\nExecution: {{ $execution.id }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "88cdc44e-d714-4565-82fa-a9d8da48f2c2",
+      "name": "Email Error Alert",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        224
+      ],
+      "webhookId": "287e3d77-1e2c-42f1-8f3b-d1e457140ecf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Px77mObt8PlaFcJN",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ type: 'SMS', contactId: $json.contact.id, message: 'Hi ' + $('Clean Caller Fields').item.json.name + \", sorry we missed your call! What can we help with? We'll call you back shortly.\" }) }}",
+        "options": {}
+      },
+      "id": "2ac22f85-114a-4108-969f-4df00dbf2cc8",
+      "name": "Send Missed Call SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        656,
+        48
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aypLtBQGMBHTJv5q",
+          "name": "GHL - Missed Call"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1U5yuDmSzFHuH8P2-h75V-Gir3Af_H21wnXNcHP0UGcY",
+          "mode": "list",
+          "cachedResultName": "Synclo - Missed Call Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1U5yuDmSzFHuH8P2-h75V-Gir3Af_H21wnXNcHP0UGcY/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "call_time": "={{ $('Clean Caller Fields').item.json.call_time }}",
+            "name": "={{ $('Clean Caller Fields').item.json.name }}",
+            "phone": "={{ $('Clean Caller Fields').item.json.phone }}",
+            "contactId": "={{ $('Upsert GHL Contact').item.json.contact.id }}",
+            "sms_status": "={{ $json.messageId ? 'sent' : 'unknown' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "call_time",
+              "displayName": "call_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "contactId",
+              "displayName": "contactId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sms_status",
+              "displayName": "sms_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "54fd1170-b1d9-45f2-a759-f43e020f4286",
+      "name": "Log Lead to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "1PkWB6brUO7cwItJ",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Missed Call Webhook": {
+      "main": [
+        [
+          {
+            "node": "Clean Caller Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Caller Fields": {
+      "main": [
+        [
+          {
+            "node": "Upsert GHL Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert GHL Contact": {
+      "main": [
+        [
+          {
+            "node": "Send Missed Call SMS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Missed Call SMS": {
+      "main": [
+        [
+          {
+            "node": "Log Lead to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6e2c34c5-96f8-4c05-8113-c8010cb3a8ad",
+  "meta": {
+    "instanceId": "485f010f49721bb82bf78417387aec0836e1f7d9a8b9a25e961d6d888887edff"
+  },
+  "nodeGroups": [],
+  "id": "totcjFrmsbd19xJX",
+  "tags": []
+}
